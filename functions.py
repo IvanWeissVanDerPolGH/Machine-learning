@@ -1,5 +1,6 @@
 import random
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.calibration import LabelEncoder
 from sklearn import svm
@@ -51,8 +52,6 @@ def train_svm_model_for_groups(df_points,kernel="linear"):
     svm_models = {group: {'model': clf, 'color': df_points[df_points['name'] == group]['color'].iloc[0]} for group in unique_groups}
     return svm_models
 
-
-
 def plot_scattered_points(df_points):
     """
     Plots the scattered points using Matplotlib.
@@ -73,7 +72,6 @@ def plot_scattered_points(df_points):
     plt.grid(True)
     plt.show()
 
-
 def plot_groups_with_decision_boundary(df_points, trained_models, new_point = None, text= None):
     """
     Plot the groups with SVM decision boundaries.
@@ -85,16 +83,13 @@ def plot_groups_with_decision_boundary(df_points, trained_models, new_point = No
     plt.figure(figsize=(8, 6))
     plt.grid(True)
     
-   
-    
     x_min, x_max = df_points['Data_x'].min() - 1, df_points['Data_x'].max() + 1
     y_min, y_max = df_points['Data_y'].min() - 1, df_points['Data_y'].max() + 1
     xx, yy = np.meshgrid(np.linspace(x_min, x_max, 100), np.linspace(y_min, y_max, 100))
 
-    for group in df_points['name'].unique():
+    for group, model_info in trained_models.items():
         X = df_points[df_points['name'] == group][['Data_x', 'Data_y']].values
         y = LabelEncoder().fit_transform([group] * len(X))
-        model_info = trained_models[group]
         clf = model_info['model']
         color = model_info['color']
 
@@ -102,7 +97,8 @@ def plot_groups_with_decision_boundary(df_points, trained_models, new_point = No
 
         Z = clf.decision_function(np.c_[xx.ravel(), yy.ravel()])
         Z = Z.reshape(xx.shape)
-        plt.contour(xx, yy, Z, colors=[color], levels=[0], linestyles=['-'], linewidths=[2])
+
+        plt.contour(xx, yy, Z, colors=[color], levels=[-1, 0, 1], linestyles=['--', '-', '--'], linewidths=[2])
 
 
     if text is not None:
@@ -136,7 +132,7 @@ def create_dataframe(points_data, group_info):
 def print_dataframe(df_points):
     print(df_points.to_markdown())
 
-def classify_new_point(df_points, trained_models, svm_model, labels):
+def classify_new_point(df_points:pd, trained_models:dict, svm_model:svm, labels: list):
     # Generate a new point
     new_point = generate_scattered_points(1, center_x=0, center_y=0, min_dist=0, max_dist=20)[0]  # Adjusted parameters
 
@@ -145,10 +141,8 @@ def classify_new_point(df_points, trained_models, svm_model, labels):
 
     # Determine the classification result message based on the prediction
     if prediction == 0:
-        result_message = f'The SVM classifies the point as: {labels[0]["name"]}'
         text = f' {labels[0]["name"]}'
     else:
-        result_message = f'The SVM classifies the point as: {labels[1]["name"]}'
         text = f' {labels[1]["name"]}'
 
     # print(result_message)
